@@ -60,9 +60,15 @@ covariateValues <- lapply(1:n, function(i) {
   return(mvrnorm(1, covariateMeanVector, covariateVarianceMatrix))
 })
 cdfValues <- runif(n)
-timeValues <- lapply(1:n, function(i) {
+realTimeValues <- lapply(1:n, function(i) {
   return(-log(cdfValues[i]) / (lambda * exp(sum(
     beta * covariateValues[[i]]
   ))))
 })
-censureValues <- rbinom(n, 1, censureRate)
+censureValues <- rbinom(n, 1, 1 - censureRate)
+observedTimeValues <- lapply(1:n, function(i) {
+  if (censureValues[i] == 0) {
+    return(runif(1, 0, realTimeValues[[i]]))
+  }
+  return(realTimeValues[[i]])
+})
