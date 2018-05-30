@@ -28,6 +28,7 @@ library(glmpath)
 library(penalized)
 ### Simon, Friedman, Hastie et Tibshirani (2011)
 library(coxnet)
+library(glmnet)
 if (FALSE) {
   #url <- "https://cran.r-project.org/src/contrib/Archive/Coxnet/Coxnet_0.2.tar.gz"
   #pkgFile <- "Coxnet_0.2.tar.gz"
@@ -126,11 +127,56 @@ formule <-
     paste(covariateNames, collapse = " + "),
     sep = ""
   ))
+
 res.coxph <- coxph(formula = formule, data = donnees)
+
 ### 'coxme' pose problème parce qu'il lui faut des effets mixtes (fixes et aléatoires)
 # res.coxme <- coxme(formula = formule, data = donnees)
 
+### 'coxpath met très longtemps à tourner ...
+# res.coxpath <-
+#   coxpath(data = list(
+#     x = as.matrix(donnees[, covariateNames]),
+#     time = donnees$time_obs,
+#     status = donnees$status
+#   ))
 
+res.penalized.nopen <- penalized(formule, data = donnees)
+### Très long la suite :
+# res.penalized.lasso <-
+#   penalized(formule, data = donnees, lambda1 = 1)
+# res.penalized.ridge <-
+#   penalized(formule, data = donnees, lambda2 = 1)
+# res.penalized.elasticNet <-
+#   penalized(formule,
+#             data = donnees,
+#             lambda1 = 1,
+#             lambda2 = 1)
+
+# res.pencoxfrail <- pencoxfrail(fix = formule, data = donnees, xi=10)
+res.pencoxfrail <-
+  pencoxfrail(
+    fix = formule,
+    vary.coef = "~",
+    rnd = list(),
+    data = donnees,
+    xi = 10
+  )
+
+res.glmnet <-
+  glmnet(
+    x = as.matrix(donnees[, covariateNames]),
+    y = Surv(time = donnees$time_obs, donnees$status),
+    family = "cox"
+  )
+
+### Comparaison des coefficients obtenus :
 coeffFound <-
-  data.frame(true_beta = beta, coxph = res.coxph$coefficients)
-
+  data.frame(
+    true_beta = beta,
+    coxph = res.coxph$coefficients,
+    penalized_nopen = res.penalized.nopen@penalized
+    # penalized_lasso = res.penalized.lasso@penalized,
+    # penalized_ridge = res.penalized.ridge@penalized,
+    # penalized_elastic_net = res.penalized.elasticNet@penalized
+  )
